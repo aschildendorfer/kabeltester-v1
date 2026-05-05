@@ -35,7 +35,10 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(kabeltester-v0 kabeltester-v0.c)
+add_executable(kabeltester-v0
+    kabeltester-v0.c
+    core0_ui.c
+    core1_engine.c)
 
 pico_set_program_name(kabeltester-v0 "kabeltester-v0")
 pico_set_program_version(kabeltester-v0 "0.1")
