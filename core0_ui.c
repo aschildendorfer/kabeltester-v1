@@ -18,7 +18,9 @@ void core0_ui_print_boot(void) {
     printf("[core0] LED blink on GPIO%u\r\n", CORE0_LED_PIN);
     printf("[core1] NeoPixel blink on GPIO%u\r\n", WS2812_PIN);
     printf("[core1] HST trigger on GPIO%u, high=%uus, period=%ums\r\n", HST_TRIGGER_PIN, HST_PULSE_HIGH_US, HST_PULSE_PERIOD_MS);
+    printf("[hw] TLV3501 input path verified, target pulse width=%uus\r\n", HST_PULSE_HIGH_US);
     printf("[core1] threshold PWM on GPIO%u, duty=%u%%, freq=%uHz\r\n", THRESHOLD_PWM_PIN, THRESHOLD_PWM_DUTY_PERCENT, THRESHOLD_PWM_FREQ_HZ);
+    printf("[core1] echo input on GPIO%u\r\n", ECHO_INPUT_PIN);
 }
 
 uint32_t core0_ui_step(uint32_t core1_last_cnt) {

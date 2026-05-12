@@ -59,6 +59,11 @@ static void hst_trigger_pwm_init(void) {
     pwm_set_enabled(slice, true);
 }
 
+static void echo_input_init(void) {
+    gpio_init(ECHO_INPUT_PIN);
+    gpio_set_dir(ECHO_INPUT_PIN, GPIO_IN);
+}
+
 static void threshold_pwm_init(void) {
     const uint32_t clk_hz = clock_get_hz(clk_sys);
     uint32_t div16 = 16u;
@@ -115,6 +120,7 @@ void core1_engine_main(void) {
     ws2812_program_init(pio, sm, offset, WS2812_PIN, WS2812_FREQ_HZ, WS2812_IS_RGBW);
     hst_trigger_pwm_init();
     threshold_pwm_init();
+    echo_input_init();
 
     multicore_fifo_push_blocking(CORE1_READY_TOKEN);
     while (multicore_fifo_pop_blocking() != CORE1_GO_TOKEN) {
