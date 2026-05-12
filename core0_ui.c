@@ -17,6 +17,8 @@ void core0_ui_print_boot(void) {
     printf("\r\n[boot] step0 multicore test\r\n");
     printf("[core0] LED blink on GPIO%u\r\n", CORE0_LED_PIN);
     printf("[core1] NeoPixel blink on GPIO%u\r\n", WS2812_PIN);
+    printf("[core1] HST trigger on GPIO%u, high=%uus, period=%ums\r\n", HST_TRIGGER_PIN, HST_PULSE_HIGH_US, HST_PULSE_PERIOD_MS);
+    printf("[core1] threshold PWM on GPIO%u, duty=%u%%, freq=%uHz\r\n", THRESHOLD_PWM_PIN, THRESHOLD_PWM_DUTY_PERCENT, THRESHOLD_PWM_FREQ_HZ);
 }
 
 uint32_t core0_ui_step(uint32_t core1_last_cnt) {
@@ -30,4 +32,8 @@ uint32_t core0_ui_step(uint32_t core1_last_cnt) {
     core0_cnt++;
     printf("[hb] core0=%lu core1=%lu\r\n", (unsigned long)core0_cnt, (unsigned long)core1_last_cnt);
     return core0_cnt;
+}
+
+void core0_ui_log_hst_trigger(uint32_t seq, uint32_t ts_ms) {
+    printf("[hst] seq=%lu ts_ms=%lu\r\n", (unsigned long)seq, (unsigned long)ts_ms);
 }

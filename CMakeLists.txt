@@ -63,7 +63,8 @@ target_include_directories(kabeltester-v0 PRIVATE
 # Add any user requested libraries
 target_link_libraries(kabeltester-v0
     hardware_pio
-    hardware_clocks)
+    hardware_clocks
+    hardware_pwm)
 
 pico_add_extra_outputs(kabeltester-v0)
 
