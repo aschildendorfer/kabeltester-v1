@@ -33,17 +33,37 @@ Akzeptanzkriterien:
 1. Projekt kompiliert sauber ohne Demo-Altlasten.
 2. Start-Logs zeigen klare Rollen von Core0 und Core1.
 
-## Schritt 2: Trigger/HST auf GPIO2
-Ziel: Reproduzierbaren Einspeisepuls erzeugen.
+## Schritt 2: Trigger auf GPIO19 (Ist-Stand PWM, Ziel HSTX)
+Ziel: Reproduzierbaren Einspeisepuls erzeugen und die Triggerbasis von PWM auf HSTX migrieren.
 
 Umsetzung:
-1. GPIO2 als HST Trigger-Ausgang konfigurieren.
-2. Pulsparameter (Breite, Abstand, Wiederholrate) als Konstanten kapseln.
-3. Triggersequenz mit Zeitstempel und Sequenznummer protokollieren.
+1. Ist-Stand dokumentieren: Trigger auf GPIO19 laeuft aktuell als PWM mit `HST_PULSE_HIGH_US` und `HST_PULSE_PERIOD_MS`.
+2. Pulsparameter als zentrale Konstanten weiterfuehren (Pulsbreite, Muster, Wiederholrate).
+3. Triggersequenz mit Zeitstempel und Sequenznummer weiter protokollieren.
+4. Migration in zwei Stufen ausfuehren: 2 (PWM-Basis stabil) und 2.a (HSTX-Ausgang aktivieren).
 
 Akzeptanzkriterien:
-1. Trigger erscheinen reproduzierbar (Scope/Logic Analyzer empfohlen).
+1. PWM-Baseline zeigt reproduzierbare Triggerfolge auf GPIO19.
 2. Keine Aussetzer bei gleichzeitigem USB-Logging.
+3. Vor Schritt 2.a sind Scope-Referenzmessungen (Pulsbreite, Periodendauer, Jitter) gespeichert.
+
+### Schritt 2.a: Triggerausgang als HSTX-Signal auf GPIO19
+Ziel: Jitter-armen, taktsynchronen Triggerpuls auf GPIO19 per HSTX-FIFO ausgeben.
+
+Umsetzung:
+1. RP2350 HSTX-Registerheader einbinden (`hardware/structs/hstx_ctrl.h`, `hardware/structs/hstx_fifo.h`, `hardware/regs/hstx_ctrl.h`) und eigene Initialisierung in Core1 anlegen.
+2. GPIO19 auf `GPIO_FUNC_HSTX` umstellen und HSTX aktivieren/deaktivieren ueber `hstx_ctrl_hw->csr` (`HSTX_CTRL_CSR_EN_BITS`).
+3. Passenden HSTX-Lane fuer den Triggerpin konfigurieren (`hstx_ctrl_hw->bit[lane]`) und Pulsausgabe per `hstx_fifo_hw->fifo` ausloesen.
+4. Pulsmuster als Konstanten kapseln, z. B. `HST_PULSE_PATTERN` (Startwert `0x00000003`), damit Pulsbreite ueber Bitmuster fein einstellbar ist.
+5. Triggererzeugung von PWM-Periodik auf explizites FIFO-Schreiben umstellen (`hstx_fifo_hw->fifo = HST_PULSE_PATTERN`).
+6. Bestehende Trigger-Telemetrie (Seq/TS) direkt an die FIFO-Ausgabe koppeln.
+7. Sicherheitsmassnahme fuer Board-Konflikte festlegen: GPIO19/GPIO3 sind beim Feather RP2350 auch STEMMA-I2C; Testaufbau und Doku entsprechend kennzeichnen.
+
+Akzeptanzkriterien:
+1. Scope zeigt HSTX-Puls auf GPIO19 mit stabiler Pulsbreite und geringerem Jitter gegenueber PWM-Basis.
+2. Trigger-Sequenznummer und Zeitstempel bleiben monoton und lueckenlos.
+3. Build/Flash/Run funktionieren weiterhin mit den VS Code Tasks `Compile Project` und `Run Project`.
+4. Rueckfalloption vorhanden (Build-Flag oder klarer Codepfad), um bei Bedarf wieder PWM-Trigger zu aktivieren.
 
 ## Schritt 3: PIO Zeitmessung fuer Echo auf GPIO3
 Ziel: Taktgenaue Laufzeitmessung unabhaengig von CPU-Jitter.

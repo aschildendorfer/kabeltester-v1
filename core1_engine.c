@@ -4,8 +4,13 @@
 #include "hardware/pio.h"
 #include "hardware/clocks.h"
 #include "hardware/pwm.h"
-#include "ws2812.pio.h"
 #include "app_config.h"
+#if HST_TRIGGER_USE_HSTX
+#include "hardware/regs/hstx_ctrl.h"
+#include "hardware/structs/hstx_ctrl.h"
+#include "hardware/structs/hstx_fifo.h"
+#endif
+#include "ws2812.pio.h"
 #include "core1_engine.h"
 
 static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
@@ -57,6 +62,34 @@ static void hst_trigger_pwm_init(void) {
     pwm_init(slice, &cfg, false);
     pwm_set_gpio_level(HST_TRIGGER_PIN, level);
     pwm_set_enabled(slice, true);
+}
+
+static void hst_trigger_init(void) {
+    // Apply the strongest pad settings on the trigger pin to maximize edge quality.
+    gpio_disable_pulls(HST_TRIGGER_PIN);
+    gpio_set_drive_strength(HST_TRIGGER_PIN, GPIO_DRIVE_STRENGTH_12MA);
+    gpio_set_slew_rate(HST_TRIGGER_PIN, GPIO_SLEW_RATE_FAST);
+
+#if HST_TRIGGER_USE_HSTX && (HST_TRIGGER_PIN >= 12) && (HST_TRIGGER_PIN <= 19)
+    const uint lane = HST_TRIGGER_PIN & 0x7u;
+
+    gpio_set_function(HST_TRIGGER_PIN, GPIO_FUNC_HSTX);
+
+    // Halt HSTX while configuring lane routing.
+    hstx_ctrl_hw->csr &= ~HSTX_CTRL_CSR_EN_BITS;
+    hstx_ctrl_hw->bit[lane] =
+        (0u << HSTX_CTRL_BIT0_SEL_N_LSB) |
+        (0u << HSTX_CTRL_BIT0_SEL_P_LSB);
+    hstx_ctrl_hw->csr |= HSTX_CTRL_CSR_EN_BITS;
+#else
+    hst_trigger_pwm_init();
+#endif
+}
+
+static inline void hst_trigger_fire(void) {
+#if HST_TRIGGER_USE_HSTX && (HST_TRIGGER_PIN >= 12) && (HST_TRIGGER_PIN <= 19)
+    hstx_fifo_hw->fifo = HST_PULSE_PATTERN;
+#endif
 }
 
 static void echo_input_init(void) {
@@ -118,7 +151,7 @@ void core1_engine_main(void) {
     bool pixel_on = false;
 
     ws2812_program_init(pio, sm, offset, WS2812_PIN, WS2812_FREQ_HZ, WS2812_IS_RGBW);
-    hst_trigger_pwm_init();
+    hst_trigger_init();
     threshold_pwm_init();
     echo_input_init();
 
@@ -144,6 +177,7 @@ void core1_engine_main(void) {
         if ((int32_t)(now_us - next_hst_log_us) >= 0) {
             do {
                 next_hst_log_us += hst_period_us;
+                hst_trigger_fire();
                 trigger_seq++;
                 if (multicore_fifo_wready()) {
                     multicore_fifo_push_blocking(CORE1_TRIGGER_SEQ_BASE | (trigger_seq & CORE_MSG_VALUE_MASK));
