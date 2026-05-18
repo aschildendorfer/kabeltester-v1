@@ -95,6 +95,10 @@ static inline void hst_trigger_fire(void) {
 static void echo_input_init(void) {
     gpio_init(ECHO_INPUT_PIN);
     gpio_set_dir(ECHO_INPUT_PIN, GPIO_IN);
+    gpio_disable_pulls(ECHO_INPUT_PIN); // No pull-up/down
+    gpio_set_slew_rate(ECHO_INPUT_PIN, GPIO_SLEW_RATE_SLOW); // Default (no edge shaping)
+    gpio_set_input_enabled(ECHO_INPUT_PIN, true); // Ensure input buffer is on
+    gpio_set_inover(ECHO_INPUT_PIN, GPIO_OVERRIDE_NORMAL); // No override/filter
 }
 
 static void threshold_pwm_init(void) {
